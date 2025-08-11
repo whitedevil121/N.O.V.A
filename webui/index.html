@@ -1,0 +1,146 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Jarvis - Personal AI</title>
+<style>
+    body {
+        background-color: #0a0f1f;
+        color: #00e5ff;
+        font-family: 'Segoe UI', sans-serif;
+        margin: 0;
+        padding: 20px;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+    }
+    h1 {
+        color: #00f7ff;
+        text-shadow: 0 0 10px #00f7ff, 0 0 20px #00f7ff;
+    }
+    #chat-box {
+        width: 90%;
+        max-width: 800px;
+        background-color: rgba(0, 20, 40, 0.8);
+        border-radius: 10px;
+        padding: 15px;
+        height: 60vh;
+        overflow-y: auto;
+        border: 1px solid #00e5ff;
+        box-shadow: 0 0 15px #00e5ff;
+    }
+    .message {
+        margin: 8px 0;
+    }
+    .user {
+        color: #fff;
+        text-align: right;
+    }
+    .ai {
+        color: #00f7ff;
+        text-align: left;
+    }
+    #controls {
+        margin-top: 10px;
+        display: flex;
+        gap: 10px;
+        width: 90%;
+        max-width: 800px;
+    }
+    textarea {
+        flex: 1;
+        background: #0a0f1f;
+        color: #00e5ff;
+        border: 1px solid #00e5ff;
+        border-radius: 5px;
+        padding: 10px;
+        resize: none;
+        height: 60px;
+    }
+    button {
+        background-color: #00e5ff;
+        color: #000;
+        border: none;
+        border-radius: 5px;
+        padding: 10px 15px;
+        cursor: pointer;
+        font-weight: bold;
+    }
+    button:hover {
+        background-color: #00b3cc;
+    }
+</style>
+</head>
+<body>
+    <h1>JARVIS - Personal AI</h1>
+    <div id="chat-box"></div>
+    <div id="controls">
+        <textarea id="prompt" placeholder="Type your message..."></textarea>
+        <button id="send-btn">Send</button>
+        <button id="voice-btn">🎤</button>
+    </div>
+
+<script>
+const chatBox = document.getElementById('chat-box');
+const promptInput = document.getElementById('prompt');
+const sendBtn = document.getElementById('send-btn');
+const voiceBtn = document.getElementById('voice-btn');
+
+function addMessage(text, sender) {
+    const msg = document.createElement('div');
+    msg.classList.add('message', sender);
+    msg.innerText = text;
+    chatBox.appendChild(msg);
+    chatBox.scrollTop = chatBox.scrollHeight;
+}
+
+async function sendMessage() {
+    const text = promptInput.value.trim();
+    if (!text) return;
+    addMessage(text, 'user');
+    promptInput.value = '';
+    addMessage("...", 'ai');
+
+    try {
+        const res = await fetch('http://127.0.0.1:8000/chat', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({text})
+        });
+        const data = await res.json();
+        document.querySelectorAll('.ai').slice(-1)[0].innerText = data.response || "[No response]";
+        speak(data.response);
+    } catch (err) {
+        document.querySelectorAll('.ai').slice(-1)[0].innerText = "Error: " + err;
+    }
+}
+
+function speak(text) {
+    const utterance = new SpeechSynthesisUtterance(text);
+    utterance.voice = speechSynthesis.getVoices().find(v => v.lang === 'en-US');
+    utterance.pitch = 1.2;
+    utterance.rate = 1;
+    speechSynthesis.speak(utterance);
+}
+
+function startVoiceRecognition() {
+    if (!('webkitSpeechRecognition' in window)) {
+        alert("Your browser does not support speech recognition.");
+        return;
+    }
+    const recognition = new webkitSpeechRecognition();
+    recognition.lang = 'en-US';
+    recognition.start();
+
+    recognition.onresult = function(event) {
+        const transcript = event.results[0][0].transcript;
+        promptInput.value = transcript;
+        sendMessage();
+    };
+}
+
+sendBtn.addEventListener('click', sendMessage);
+voiceBtn.addEventListener('click', startVoiceRecognition);
+</script>
+</body>
+</html>
